@@ -1,0 +1,19 @@
+[project]
+name = "FasterRCNN"
+version = "0.1.0"
+description = ""
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "h5py",
+    "imageio",
+    "matplotlib",
+    "numpy",
+    "torch",
+    "torchvision",
+    "tqdm",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pipdeptree==2.26.1",
+]

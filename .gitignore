@@ -1,13 +1,18 @@
-# .gitignore
+# editor
+**/.vscode
 
-__pycache__
-.vs
-venv
+# build
+**/__pycache__
+
+# dependencies
+**/.venv
+uv.lock
 
 *.bin
 *.hdf5
 *.h5
 *.png
+*.jpg
 *.sh
 *.pth
 *.csv

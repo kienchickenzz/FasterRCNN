@@ -453,6 +453,14 @@ class FasterRCNNModel(nn.Module):
       be used. There are no box delta regression targets for background
       proposals and the mask is entirely 0 for those proposals.
     """
+    # min_background_iou_threshold
+    #
+    # Why do we need this filter? 
+    # Imagine you have a proposal in the corner of an image while the ground truth box 
+    # is in the middle of the image. The IoU between them is almost zero, and teaching 
+    # the model that this proposal is “background” would not provide any useful information. 
+    # Instead, the model would learn better from “hard negative examples” — proposals that 
+    # overlap SLIGHTLY with objects but are still considered background.
     assert min_background_iou_threshold < min_object_iou_threshold, "Object threshold must be greater than background threshold"
 
     # Convert ground truth box corners to (M,4) tensor and class indices to (M,)

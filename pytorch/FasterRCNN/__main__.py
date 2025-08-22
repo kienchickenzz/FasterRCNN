@@ -177,10 +177,10 @@ def train(model):
         image_data = t.from_numpy(sample.image_data).unsqueeze(dim = 0).cuda(),
         anchor_map = sample.anchor_map,
         anchor_valid_map = sample.anchor_valid_map,
-        gt_rpn_map = t.from_numpy(sample.gt_rpn_map).unsqueeze(dim = 0).cuda(),
-        gt_rpn_object_indices = [ sample.gt_rpn_object_indices ],
-        gt_rpn_background_indices = [ sample.gt_rpn_background_indices ],
-        gt_boxes = [ sample.gt_boxes ]
+        gt_rpn_map = t.from_numpy(sample.gt_rpn_map).unsqueeze(dim = 0).cuda(), 
+        gt_rpn_object_indices = [ sample.gt_rpn_object_indices ],         # Pack indices into a list to create a "batch" of 1 element
+        gt_rpn_background_indices = [ sample.gt_rpn_background_indices ], # Pack indices into a list to create a "batch" of 1 element
+        gt_boxes = [ sample.gt_boxes ]                                    # Pack indices into a list to create a "batch" of 1 element
       )
       stats.on_training_step(loss = loss)
       progbar.set_postfix(stats.get_progbar_postfix())

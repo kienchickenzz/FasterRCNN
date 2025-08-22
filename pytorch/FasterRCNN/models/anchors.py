@@ -208,25 +208,43 @@ def generate_rpn_map(anchor_map, anchor_valid_map, gt_boxes, object_iou_threshol
   # IoU scores
   ious[anchor_valid_map.flatten() == 0, :] = -1.0
 
-  # Find the best IoU ground truth box for each anchor and the best IoU anchor
-  # for each ground truth box.
+  # We are working with two different "perspectives" of the same relationship 
+  # between anchors and ground truth boxes.
+  # First Pair - Anchor Perspective:
+  # max_iou_per_anchor: Each anchor asks "What is the highest IoU I can get with all GT boxes?"
+  # best_box_idx_per_anchor: Each anchor asks "Which GT box gives me the highest IoU?"
   #
-  # Note that ious == max_iou_per_gt_box tests each of the N rows of ious
-  # against the M elements of max_iou_per_gt_box, column-wise. np.where() then
-  # returns all (y,x) indices of matches as a tuple: (y_indices, x_indices).
-  # The y indices correspond to the N dimension and therefore indicate anchors
-  # and the x indices correspond to the M dimension (ground truth boxes).
+  # Second Pair - Ground Truth Perspective:
+  # max_iou_per_gt_box: Each GT box asks "What is the highest IoU I can get with all anchors?"
+  # highest_iou_anchor_idxs: Each GT box asks "Which anchor gives me the highest IoU?"
+
+  # These two perspectives do not necessarily give the same result. 
+  # For example, anchor A may like GT box 1 the most, 
+  # but GT box 1 likes anchor B more than anchor A. 
+  # This is why the RPN algorithm needs to handle both directions to ensure fairness.
+  # 
+  # Why do we need both of these perspectives?
+  # The anchor perspective helps us to classify each anchor appropriately 
+  # based on the IoU threshold. If an anchor has a high IoU for any GT box, 
+  # it should be considered positive. Conversely, if the IoU is low for all GT boxes, 
+  # it should be negative. 
+  # The GT box perspective ensures that every object in the image has at least 
+  # one anchor representative, even if the IoU does not meet the threshold criteria. 
+  # This is important because if an object is difficult to detect (e.g., a small or irregularly shaped object), 
+  # we still want at least one anchor to learn to detect it.
   max_iou_per_anchor = np.max(ious, axis = 1)           # (N,)
   best_box_idx_per_anchor = np.argmax(ious, axis = 1)   # (N,)
   max_iou_per_gt_box = np.max(ious, axis = 0)           # (M,)
-  highest_iou_anchor_idxs = np.where(ious == max_iou_per_gt_box)[0] # get (L,) indices of anchors that are the highest-overlapping anchors for at least one of the M boxes
+  highest_iou_anchor_idxs = np.where(ious == max_iou_per_gt_box)[0]
 
+  # Step 1: Anchor perspective - based on threshold
   # Anchors below the minimum threshold are negative
   objectness_score[max_iou_per_anchor < background_iou_threshold] = 0
 
   # Anchors that meet the threshold IoU are positive
   objectness_score[max_iou_per_anchor >= object_iou_threshold] = 1
 
+  # Step 2: From the GT box perspective - make sure each GT has a representative
   # Anchors that overlap the most with ground truth boxes are positive
   objectness_score[highest_iou_anchor_idxs] = 1
 
@@ -241,7 +259,7 @@ def generate_rpn_map(anchor_map, anchor_valid_map, gt_boxes, object_iou_threshol
   # anchors as 0 in objectness score because the score can only really be 0 or
   # 1.
   enable_mask = (objectness_score >= 0).astype(np.float32)
-  objectness_score[objectness_score < 0] = 0
+  objectness_score[objectness_score < 0] = 0 # All neutral anchors (with value -1) are converted to 0
 
   # Compute box delta regression targets for each anchor
   box_delta_targets = np.empty((n, 4))
