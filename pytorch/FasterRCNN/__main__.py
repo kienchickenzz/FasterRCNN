@@ -23,7 +23,7 @@ import os
 import torch as t
 from tqdm import tqdm
 
-from .datasets import voc
+from .datasets import voc, dogcat
 from .models.faster_rcnn import FasterRCNNModel
 from .models import vgg16
 from .models import vgg16_torch
@@ -59,9 +59,9 @@ def render_anchors(backbone):
       gt_boxes = sample.gt_boxes
     )
 
-def evaluate(model, eval_data = None, num_samples = None, plot = False, print_average_precisions = False):
+def evaluate( model, eval_data = None, num_samples = None, plot = False, print_average_precisions = False ):
   if eval_data is None:
-    eval_data = voc.Dataset(
+    eval_data = dogcat.Dataset(
       image_preprocessing_params = model.backbone.image_preprocessing_params,
       compute_feature_map_shape_fn = model.backbone.compute_feature_map_shape,
       feature_pixels = model.backbone.feature_pixels,
