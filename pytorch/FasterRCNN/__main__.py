@@ -36,7 +36,7 @@ from . import visualize
 
 
 def render_anchors(backbone):
-  training_data = voc.Dataset(
+  training_data = dogcat.Dataset(
     image_preprocessing_params = backbone.image_preprocessing_params,
     compute_feature_map_shape_fn = backbone.compute_feature_map_shape,
     feature_pixels = backbone.feature_pixels,
