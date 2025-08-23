@@ -329,7 +329,7 @@ class Dataset:
                 assert y_max != None, "Failed to parse %s" % annotation_file
 
                 x_min = int( float( x_min ) ) - 1 # convert to 0-based pixel coordinates
-                y_min = int( y_min ) - 1 # convert to 0-based pixel coordinates
+                y_min = int( float( y_min ) ) - 1 # convert to 0-based pixel coordinates
                 x_max = int( x_max ) - 1 # convert to 0-based pixel coordinates
                 y_max = int( y_max ) - 1 # convert to 0-based pixel coordinates
                 
