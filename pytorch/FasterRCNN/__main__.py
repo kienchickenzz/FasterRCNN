@@ -88,11 +88,11 @@ def evaluate( model, eval_data = None, num_samples = None, plot = False, print_a
     if i >= num_samples:
       break
   if print_average_precisions:
-    precision_recall_curve.print_average_precisions(class_index_to_name = voc.Dataset.class_index_to_name)
+    precision_recall_curve.print_average_precisions(class_index_to_name = dogcat.Dataset.class_index_to_name)
   mean_average_precision = 100.0 * precision_recall_curve.compute_mean_average_precision()
   print("Mean Average Precision = %1.2f%%" % mean_average_precision)
   if plot:
-    precision_recall_curve.plot_average_precisions(class_index_to_name = voc.Dataset.class_index_to_name)
+    precision_recall_curve.plot_average_precisions(class_index_to_name = dogcat.Dataset.class_index_to_name)
   return mean_average_precision
 
 def create_optimizer(model):

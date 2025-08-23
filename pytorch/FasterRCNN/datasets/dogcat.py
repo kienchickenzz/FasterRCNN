@@ -39,7 +39,7 @@ class Dataset:
         Parameters
         ----------
         split : str
-            Dataset split to load: train, val, or trainval.
+            Dataset split to load: train, val, or test.
         image_preprocessing_params : dataset.image.PreprocessingParams
             Image preprocessing parameters to apply when loading images.
         compute_feature_map_shape_fn : Callable[Tuple[int, int, int], Tuple[int, int, int]]
@@ -183,12 +183,18 @@ class Dataset:
         
         all_images = cat_images + dog_images
         all_images.sort()
+
+        n_total = len( all_images )
+        n_train = int( 0.7 * n_total )
+        n_val   = int( 0.1 * n_total )
         
-        # Split dataset into train (80%) and validation (20%)
+        # Split dataset into train (70%), validation (10%) and test (10%)
         if self.split == "train":
-            return all_images[ :int( 0.8 * len( all_images ) ) ]
+            return all_images[ :n_train ]
         elif self.split == "val":
-            return all_images[ int( 0.8 * len( all_images ) ): ]
+            return all_images[ n_train:n_train + n_val ]
+        elif self.split == "test":
+            return all_images[ n_train + n_val: ]
         else:
             return all_images
 
