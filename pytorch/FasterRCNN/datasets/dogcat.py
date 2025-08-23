@@ -330,7 +330,7 @@ class Dataset:
 
                 x_min = int( float( x_min ) ) - 1 # convert to 0-based pixel coordinates
                 y_min = int( float( y_min ) ) - 1 # convert to 0-based pixel coordinates
-                x_max = int( x_max ) - 1 # convert to 0-based pixel coordinates
+                x_max = int( float( x_max ) ) - 1 # convert to 0-based pixel coordinates
                 y_max = int( y_max ) - 1 # convert to 0-based pixel coordinates
                 
                 corners = np.array( [ y_min, x_min, y_max, x_max ] ).astype( np.float32 )
