@@ -27,7 +27,7 @@ class Dataset:
         self, 
         split: str, 
         image_preprocessing_params: PreprocessingParams, 
-        compute_feature_map_shape_fn: Callable[ [ Tuple[ int, int, int ], Tuple[ int, int, int ] ] ], 
+        compute_feature_map_shape_fn, 
         feature_pixels: int = 16, 
         dir: str = "asirra_cat_vs_dogs", 
         augment: bool = True, 
@@ -328,7 +328,7 @@ class Dataset:
                 assert x_max != None, "Failed to parse %s" % annotation_file
                 assert y_max != None, "Failed to parse %s" % annotation_file
 
-                x_min = int( x_min ) - 1 # convert to 0-based pixel coordinates
+                x_min = int( float( x_min ) ) - 1 # convert to 0-based pixel coordinates
                 y_min = int( y_min ) - 1 # convert to 0-based pixel coordinates
                 x_max = int( x_max ) - 1 # convert to 0-based pixel coordinates
                 y_max = int( y_max ) - 1 # convert to 0-based pixel coordinates
