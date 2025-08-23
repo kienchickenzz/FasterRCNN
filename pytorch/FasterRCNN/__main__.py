@@ -140,7 +140,7 @@ def train(model):
   print("Checkpoints       : %s" % ("disabled" if not options.checkpoint_dir else options.checkpoint_dir))
   print("Final weights file: %s" % ("none" if not options.save_to else options.save_to))
   print("Best weights file : %s" % ("none" if not options.save_best_to else options.save_best_to))
-  training_data = voc.Dataset(
+  training_data = dogcat.Dataset(
     dir = options.dataset_dir,
     split = options.train_split,
     image_preprocessing_params = model.backbone.image_preprocessing_params,
@@ -150,7 +150,7 @@ def train(model):
     shuffle = True,
     cache = options.cache_images
   )
-  eval_data = voc.Dataset(
+  eval_data = dogcat.Dataset(
     dir = options.dataset_dir,
     split = options.eval_split,
     image_preprocessing_params = model.backbone.image_preprocessing_params,
