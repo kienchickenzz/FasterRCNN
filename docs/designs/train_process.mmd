@@ -11,12 +11,9 @@ sequenceDiagram
     participant Stats as TrainingStatistics
     participant Eval as evaluate()
     participant PR as PrecisionRecallCurveCalculator
-    participant CSV as utils.CSVLog
-    participant Best as BestWeightsTracker
 
     User->>Main: run `python -m pytorch.FasterRCNN --train ...`
     Main->>Main: parse args
-    %% Note over Main: options = {...}
     Main->>Main: validate options (backbone, ...)
     Main->>Main: create selected backbone
     Main->>Main: create FasterRCNN with options
@@ -29,46 +26,48 @@ sequenceDiagram
     Trainer->>Trainer: create CSVLog (if required)
     Trainer->>Trainer: create BestWeightsTracker (if required)
 
-    Note over Trainer, Stats:
+    Note over Trainer, Stats: Repeat by configured epoch number
     loop epochs (1 .. options.epochs)
         Trainer->>Trainer: create TrainingStatistics
-        Trainer->>Dataset: request sample
-        Dataset-->>Trainer: yield sample
-        Trainer->>TrainStep: model.train_step(optimizer, image_data, anchor_map, gt_boxes...)
-        TrainStep->>Optimizer: compute grads & optimizer.step()
-        TrainStep-->>Trainer: return loss
-        Trainer->>Stats: pass loss
-        Stats->>Stats: accumulate loss accross steps within epoch
-        Stats-->>Trainer: return stats dict
-        Trainer->>Trainer: update progbar
+        
+        Note over Trainer,Stats: iterate over train data samples
+        loop for each train sample
+            Trainer->>Dataset: request sample
+            Dataset-->>Trainer: yield sample
+
+            Trainer->>TrainStep: model.train_step(optimizer, image_data, anchor_map, gt_boxes...)
+            TrainStep->>Optimizer: compute grads & optimizer.step()
+            TrainStep-->>Trainer: return loss
+            
+            Trainer->>Stats: pass loss
+            Stats->>Stats: accumulate loss accross steps within epoch
+            Stats-->>Trainer: return stats dict
+            Trainer->>Trainer: update progbar
+        end
+
+        Trainer->>Trainer: save checkpoint (if required)
+        Trainer->>Trainer: log to CSV file (if required)
+        Trainer->>Trainer: keep track of best weights (if required)
     end
 
+    Trainer->>Trainer: save final weights
+    Trainer->>Trainer: save best weights (if required)
+    
     Trainer->>Eval: func call
-    Note over Eval,Dataset: iterate over eval data samples
+    Note over Model,PR: iterate over eval data samples
     loop for each eval sample
         Eval->>Dataset: request sample
         Dataset-->>Eval: yield sample
+
         Eval->>Model: pass image data
         Model-->>PR: return prediction
         PR->>PR: compute correctness of predictions and accumulate results 
     end
     PR->>Eval: return results
-    Eval-->>Trainer: return results
+    Eval-->>Eval: print results
 
-    Trainer->>Trainer: save checkpoint (if required)
-    Trainer->>Trainer: log to CSV file (if required)
-    Trainer->>Best: if options.save_best_to then best_weights_tracker.on_epoch_end(...)
-
-    alt final save
-        Trainer->>State: if options.save_to then t.save(final weights)
-        Trainer->>Best: if options.save_best_to then best_weights_tracker.save_best_weights(model)
-    end
-
-    Trainer->>Eval: final evaluate on full dataset (print APs if requested)
-    Eval-->>Main: done
     Main-->>User: exit (training completed)
 
 %% Notes:
-%% - Optional/conditional steps are guarded by 'if options...'
 %% - model.train_step performs forward, loss, backward, optimizer update
 %% - evaluate runs model.predict per sample and computes mAP via PrecisionRecallCurveCalculator

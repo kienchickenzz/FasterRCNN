@@ -8,9 +8,9 @@ dependencies = [
     "imageio",
     "matplotlib",
     "numpy",
+    "tqdm",
     "torch",
     "torchvision",
-    "tqdm",
 ]
 
 [tool.uv]

@@ -169,17 +169,21 @@ def train(model):
     shuffle = False,
     cache = False
   )
-  
+
   optimizer = create_optimizer(model = model)
+
   if options.checkpoint_dir and not os.path.exists(options.checkpoint_dir):
     os.makedirs(options.checkpoint_dir)
   if options.log_csv:
     csv = utils.CSVLog(options.log_csv)
   if options.save_best_to:
     best_weights_tracker = state.BestWeightsTracker(filepath = options.save_best_to)
+  
   for epoch in range(1, 1 + options.epochs):
     print("Epoch %d/%d" % (epoch, options.epochs))
+    
     stats = TrainingStatistics()
+    
     progbar = tqdm(iterable = iter(training_data), total = training_data.num_samples, postfix = stats.get_progbar_postfix())
     for sample in progbar:
       loss = model.train_step(  # don't retain any tensors we don't need (helps memory usage)
@@ -191,7 +195,7 @@ def train(model):
         gt_rpn_object_indices = [ sample.gt_rpn_object_indices ],         # Pack indices into a list to create a "batch" of 1 element
         gt_rpn_background_indices = [ sample.gt_rpn_background_indices ], # Pack indices into a list to create a "batch" of 1 element
         gt_boxes = [ sample.gt_boxes ]                                    # Pack indices into a list to create a "batch" of 1 element
-      )
+      )      
       stats.on_training_step(loss = loss)
       progbar.set_postfix(stats.get_progbar_postfix())
     last_epoch = epoch == options.epochs
@@ -202,10 +206,12 @@ def train(model):
       plot = False,
       print_average_precisions = False
     )
+
     if options.checkpoint_dir:
       checkpoint_file = os.path.join(options.checkpoint_dir, "checkpoint-epoch-%d-mAP-%1.1f.pth" % (epoch, mean_average_precision))
       t.save({ "epoch": epoch, "model_state_dict": model.state_dict() }, checkpoint_file)
       print("Saved model checkpoint to '%s'" % checkpoint_file)
+    
     if options.log_csv:
       log_items = {
         "epoch": epoch,
@@ -217,13 +223,17 @@ def train(model):
       }
       log_items.update(stats.get_progbar_postfix())
       csv.log(log_items)
+
     if options.save_best_to:
       best_weights_tracker.on_epoch_end(model = model, epoch = epoch, mAP = mean_average_precision)
+  
   if options.save_to:
     t.save({ "epoch": epoch, "model_state_dict": model.state_dict() }, options.save_to)
     print("Saved final model weights to '%s'" % options.save_to)
+  
   if options.save_best_to:
     best_weights_tracker.save_best_weights(model = model)
+  
   print("Evaluating %s model on all samples in '%s'..." % (("best" if options.save_best_to else "final"), options.eval_split))  # evaluate final or best model on full dataset
   evaluate(
     model = model,
