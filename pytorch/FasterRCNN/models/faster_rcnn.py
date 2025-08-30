@@ -132,7 +132,13 @@ class FasterRCNNModel(nn.Module):
     return proposals, classes, box_deltas
 
   @utils.no_grad
-  def predict(self, image_data, score_threshold, anchor_map = None, anchor_valid_map = None):
+  def predict(
+    self, 
+    image_data, 
+    score_threshold, 
+    anchor_map = None, 
+    anchor_valid_map = None
+  ):
     """
     Performs inference on an image and obtains the final detected boxes.
 
@@ -197,8 +203,14 @@ class FasterRCNNModel(nn.Module):
       )
 
       # Clip to image boundaries
-      proposal_boxes_this_class[:,0::2] = np.clip(proposal_boxes_this_class[:,0::2], 0, image_data.shape[2] - 1)  # clip y1 and y2 to [0,height)
-      proposal_boxes_this_class[:,1::2] = np.clip(proposal_boxes_this_class[:,1::2], 0, image_data.shape[3] - 1)  # clip x1 and x2 to [0,width)
+      proposal_boxes_this_class[:,0::2] = np.clip(
+        proposal_boxes_this_class[:,0::2], 
+        0, image_data.shape[2] - 1
+      )  # clip y1 and y2 to [0,height)
+      proposal_boxes_this_class[:,1::2] = np.clip(
+        proposal_boxes_this_class[:,1::2], 
+        0, image_data.shape[3] - 1
+        )  # clip x1 and x2 to [0,width)
 
       # Get the scores for this class. The class scores are returned in
       # normalized categorical form. Each row corresponds to a class.

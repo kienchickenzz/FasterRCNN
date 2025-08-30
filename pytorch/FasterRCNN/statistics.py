@@ -10,6 +10,7 @@ from collections import defaultdict
 import numpy as np
 
 from .models.math_utils import intersection_over_union
+from .datasets.training_sample import Box
 
 
 class TrainingStatistics:
@@ -74,12 +75,11 @@ class PrecisionRecallCurveCalculator:
     # True number of objects by class for all images in dataset
     self._object_count_by_class_index = defaultdict(int)
 
-  def _compute_correctness_of_predictions(self, scored_boxes_by_class_index, gt_boxes):
+  def _compute_correctness_of_predictions(self, scored_boxes_by_class_index, gt_boxes: list[ Box ] ):
     unsorted_predictions_by_class_index = {}
     object_count_by_class_index = defaultdict(int)
 
-    # Count objects by class. We do this here because in case there are no
-    # predictions, we do not want to miscount the total number of objects.
+    # Count objects by class
     for gt_box in gt_boxes:
       object_count_by_class_index[gt_box.class_index] += 1
 
@@ -92,11 +92,14 @@ class PrecisionRecallCurveCalculator:
       ious = []
       for gt_idx in range(len(gt_boxes_this_class)):
         for box_idx in range(len(scored_boxes)):
-          boxes1 = np.expand_dims(scored_boxes[box_idx][0:4], axis = 0) # convert single box (4,) to (1,4), as expected by parallel IoU function
-          boxes2 = np.expand_dims(gt_boxes_this_class[gt_idx].corners, axis = 0)
-          iou = intersection_over_union(boxes1 = boxes1, boxes2 = boxes2) 
+          # convert single box (4,) to (1,4), as expected by parallel IoU function
+          boxes1 = np.expand_dims(scored_boxes[box_idx][0:4], axis = 0) # (1, 4)
+          boxes2 = np.expand_dims(gt_boxes_this_class[gt_idx].corners, axis = 0) # (1, 4)
+          iou = intersection_over_union(boxes1 = boxes1, boxes2 = boxes2) # (1, 1)
+          iou = iou[ 0, 0 ] # Get scalar value
           ious.append((iou, box_idx, gt_idx))
-      ious = sorted(ious, key = lambda iou: ious[0], reverse = True)  # sort descending by IoU
+      # BUG: Lambda function?!
+      ious = sorted(ious, key = lambda iou_tuple: iou_tuple[ 0 ], reverse = True) # sort descending by IoU
       
       # Vector that indicates whether a ground truth box has been detected
       gt_box_detected = [ False ] * len(gt_boxes)
@@ -115,6 +118,30 @@ class PrecisionRecallCurveCalculator:
       # with IoU <= 0.5 or that do not have the highest IoU for any ground
       # truth box are considered false positives.
       #
+      # Example:
+      # Suppose you have 2 real cats (GT1 and GT2) and a model predicting 3 boxes (P1, P2, P3). 
+      # After calculating IoU and sorting, we get:
+      #
+      # P1 with GT1: IoU = 0.8 (very good!)
+      # P2 with GT1: IoU = 0.7 (also good)
+      # P1 with GT2: IoU = 0.6 (pretty good)
+      # P3 with GT2: IoU = 0.4 (below threshold)
+      # P2 with GT2: IoU = 0.3 (below threshold)
+      # P3 with GT1: IoU = 0.2 (below threshold)
+      #
+      # The algorithm will process in decreasing IoU order. First, P1 is paired with 
+      # GT1 (IoU=0.8). Both P1 and GT1 are marked as "paired". Next, although P2 has 
+      # IoU=0.7 with GT1, GT1 has already been matched with P1, so P2 is not matched 
+      # - it becomes a False Positive. Then, P1 with GT2 is ignored because P1 has 
+      # already been matched. P3 with GT2 has IoU=0.4, below the threshold of 0.5, 
+      # so it is also ignored.
+      # The final result: P1 is True Positive, P2 and P3 are False Positive, 
+      # GT2 is not detected (missed detection).
+      #
+      # This is to ensure that there is no case where the model predicts 100 boxes that 
+      # overlap the same cat and claims to detect it correctly 100 times - which is 
+      # clearly unreasonable.
+      #
       iou_threshold = 0.5
       for iou, box_idx, gt_idx in ious:
         if iou <= iou_threshold:
@@ -126,11 +153,14 @@ class PrecisionRecallCurveCalculator:
         is_true_positive[box_idx] = True
         gt_box_detected[gt_idx] = True
       # Construct the final array of prediction descriptions
-      unsorted_predictions_by_class_index[class_index] = [ (scored_boxes[i][4], is_true_positive[i]) for i in range(len(scored_boxes)) ]
+      unsorted_predictions_by_class_index[class_index] = [ 
+        (scored_boxes[i][4], is_true_positive[i]) # (confidence_score, is_correct)
+        for i in range(len(scored_boxes)) 
+      ]
         
     return unsorted_predictions_by_class_index, object_count_by_class_index
 
-  def add_image_results(self, scored_boxes_by_class_index, gt_boxes):
+  def add_image_results(self, scored_boxes_by_class_index: dict, gt_boxes: list[ Box ] ):
     """
     Adds a detection result to the running tally. Should be called only once per
     image in the dataset.

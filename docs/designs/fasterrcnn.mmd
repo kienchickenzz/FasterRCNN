@@ -1,0 +1,129 @@
+---
+id: 04b7d897-45c5-4d1f-8a8a-608b4d40532a
+---
+classDiagram
+    class FasterRCNN {
+        %% Constants
+        -int num_classes
+        -int rpn_minibatch_size
+        -int proposal_batch_size
+        -list[int] detector_box_delta_means
+        -list[int] detector_box_delta_stds
+
+        %% Define network
+        +Backbone backbone
+        +FeatureExtractor stage1_feature_extractor
+        +RegionProposalNetwork stage2_region_proposal_network
+        +DetectorNetwork stage3_detector_network
+
+        +forward(..) (..)
+        +predict(..) (..)
+        +train_step(..) (..)
+
+        -sample_rpn_minibatch(..) (..)
+        -label_proposals(..) (..)
+        -sample_proposals(..) (..)
+    }
+
+    class Loss {
+        <<dataclass>>
+        +float rpn_class
+        +float rpn_regression
+        +float detector_class
+        +float detector_regression
+        +float total
+    }
+
+    FasterRCNNModel o-- Loss : returns / produces
+    
+    class Backbone {
+        <<abstract>>
+        %% Required properties
+        +int feature_map_channels
+        +int feature_pixels
+        +int feature_vector_size
+        +PreprocessingParams image_preprocessing_params
+        
+        %% Required members
+        +nn.Module feature_extractor
+        +nn.Module pool_to_feature_vector
+
+        +compute_feature_map_shape(image_shape) (c, h, w)
+    }
+
+    class ChannelOrder {
+        <<enumeration>>
+        +RGB
+        +BGR
+    }
+
+    class PreprocessingParams {
+        <<dataclass>>
+        +ChannelOrder channel_order
+        +float scaling
+        +List<float> means
+        +List<float> stds
+    }
+    
+    class FeatureExtractor {
+        +forward(image_data) feature_map
+    }
+
+    class VGG16Backbone {
+        %% Backbone properties
+        +int feature_map_channels = 512
+        +int feature_pixels = 16
+        +int feature_vector_size = 4096
+        +FeatureExtractor feature_extractor
+        +PreprocessingParams image_preprocessing_params
+
+        +PoolToFeatureVector pool_to_feature_vector
+    }
+
+    %% TODO: Add module math_utils
+    
+    class RegionProposalNetwork {
+        %% Constants
+        -bool allow_edge_proposals
+
+        %% Define network
+        -nn.Conv2d rpn_conv
+        -nn.Conv2d rpn_class
+        -nn.Conv2d rpn_boxes
+
+        +forward(..) (..)
+        -extract_valid(..) (..)
+
+        +class_loss(..) (..)
+        +regression_loss(..) (..)
+    }
+
+    class DetectorNetwork {
+        %% Define network
+        -ops.RoIPool roi_pool
+        -PoolToFeatureVector pool_to_feature_vector
+        -nn.Linear classifier
+        -nn.Linear regressor
+
+        +forward(..) (..)
+    }
+
+    class PoolToFeatureVector {
+        +forward(rois) feature_vector
+    }
+    
+    %% Inheritance
+    Backbone <|-- VGG16Backbone : extends
+    
+    %% Composition
+    FasterRCNN *-- VGG16Backbone : contains
+    FasterRCNN *-- RegionProposalNetwork : contains
+    FasterRCNN *-- DetectorNetwork : contains
+    VGG16Backbone *-- PoolToFeatureVector : get dropout_probability
+    VGG16Backbone *-- FeatureExtractor : feature_extractor
+
+    %% Dependency
+    DetectorNetwork ..> PoolToFeatureVector : uses
+    
+    Backbone *-- PreprocessingParams : image_preprocessing_params
+    PreprocessingParams --> ChannelOrder : channel_order

@@ -107,8 +107,10 @@ def create_optimizer(model):
   for key, value in dict(model.named_parameters()).items():
     if not value.requires_grad:
       continue
-    if "weight" in key:
+    if "weight" in key: # Weight parameters
       params += [{ "params": [value], "weight_decay": options.weight_decay }]
+    else: # Bias parameters
+      params += [{ "params": [value], "weight_decay": 0.0 }] # Do not apply weight decay for bias
   return t.optim.SGD(params, lr = options.learning_rate, momentum = options.momentum)
 
 def enable_cuda_memory_profiler(model):
@@ -167,6 +169,7 @@ def train(model):
     shuffle = False,
     cache = False
   )
+  
   optimizer = create_optimizer(model = model)
   if options.checkpoint_dir and not os.path.exists(options.checkpoint_dir):
     os.makedirs(options.checkpoint_dir)
@@ -306,7 +309,6 @@ if __name__ == "__main__":
   parser.add_argument("--eval-split", metavar = "name", action = "store", default = "val", 
         help = "Dataset split to use for evaluation" )
   
-  
     # Training Parameters
   parser.add_argument("--epochs", metavar = "count", type = int, action = "store", default = 1, 
         help = "Number of epochs to train for" )
@@ -353,10 +355,6 @@ if __name__ == "__main__":
   elif options.backbone == "resnet152":
     backbone = resnet.ResNetBackbone(architecture = resnet.Architecture.ResNet152)
 
-  # Perform optional procedures
-  if options.dump_anchors:
-    render_anchors(backbone = backbone)
-
   # Construct model and load initial weights
   model = FasterRCNNModel(
     num_classes = dogcat.Dataset.num_classes,
@@ -377,5 +375,7 @@ if __name__ == "__main__":
     predict_one(model = model, url = options.predict_to_file, show_image = False, output_path = "predictions.png")
   elif options.predict_all:
     predict_all(model = model, split = options.predict_all)
-  elif not options.dump_anchors:
+  elif options.dump_anchors:
+    render_anchors(backbone = backbone)
+  else:
     print("Nothing to do. Did you mean to use --train or --predict?")
