@@ -7,7 +7,7 @@ from typing import Tuple, Callable
 from .training_sample import Box
 from .training_sample import TrainingSample
 from . import image
-from pytorch.FasterRCNN.models import anchors
+from FasterRCNN.models import anchors
 from .image import PreprocessingParams
 
 
@@ -64,8 +64,6 @@ class Dataset:
             raise FileNotFoundError( "Dataset directory does not exist: %s" % dir )
         self._dir = dir
         
-        self.split = split
-        
         self.class_index_to_name = self._get_classes()
         assert self.class_index_to_name == Dataset.class_index_to_name, "Dataset does not have the expected class mapping"
         
@@ -74,19 +72,22 @@ class Dataset:
         self.num_classes = len( self.class_index_to_name )
         assert self.num_classes == Dataset.num_classes, "Dataset does not have the expected number of classes (found %d but expected %d)" % ( self.num_classes, Dataset.num_classes )
         
+        self.split = split
         self._filepaths = self._get_filepaths()
         self.num_samples = len( self._filepaths )
         self._gt_boxes_by_filepath = self._get_ground_truth_boxes( filepaths = self._filepaths, allow_difficult = allow_difficult )
-        self._i = 0
         self._iterable_filepaths = self._filepaths.copy()
+        
+        self._i = 0 # Iterator index
+        
         self._image_preprocessing_params = image_preprocessing_params
         self._compute_feature_map_shape_fn = compute_feature_map_shape_fn
         self._feature_pixels = feature_pixels
         self._augment = augment
         self._shuffle = shuffle
         self._cache = cache
-        self._unaugmented_cached_sample_by_filepath = {}
-        self._augmented_cached_sample_by_filepath = {}
+        self._unaugmented_cached_sample_by_filepath: dict[ str, TrainingSample ] = {}
+        self._augmented_cached_sample_by_filepath: dict[ str, TrainingSample ] = {}
 
     def __iter__( self ):
         self._i = 0
@@ -266,7 +267,7 @@ class Dataset:
         """
 
     def _get_ground_truth_boxes( self, filepaths: list[ str ], allow_difficult: bool ):
-        gt_boxes_by_filepath = {}
+        gt_boxes_by_filepath: dict[ str, list[ Box ] ] = {}
 
         for filepath in filepaths:
             # Identify XML file
@@ -291,7 +292,7 @@ class Dataset:
             depth = int( depth )
             assert depth == 3
             
-            boxes = []
+            boxes: list[ Box ] = []
             for obj in root.findall( "object" ):
                 assert len( obj.findall( "name" ) ) == 1
                 assert len( obj.findall( "bndbox" ) ) == 1

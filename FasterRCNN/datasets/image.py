@@ -40,23 +40,48 @@ def _compute_scale_factor(original_width, original_height, min_dimension_pixels)
     scale_factor = min_dimension_pixels / original_width
   return scale_factor
 
-def _preprocess_vgg16(image_data, preprocessing):
-  if preprocessing.channel_order == ChannelOrder.RGB:
-    pass                                        # already in RGB order
+def _apply_preprocessing( image_data, preprocessing: PreprocessingParams ):
+  """
+  Apply preprocessing steps to an image. This includes adjust the channel order (RGB or BGR), 
+  scales and standardizes pixel values using the provided per-channel means and standard deviations,
+  and rearranges the data layout to (channels, height, width).
+
+  Parameters
+  ----------
+  image_data : np.ndarray
+      Image array in (height, width, 3) format with pixel values as float32.
+      Expected to be in RGB order initially.
+  preprocessing : PreprocessingParams
+    Image pre-processing parameters governing channel order and normalization.
+
+  Returns
+  -------
+  np.ndarray
+      Preprocessed image array in shape (3, height, width), with channels-first
+      format and normalized pixel values suitable for model input.
+  """
+  if preprocessing.channel_order == ChannelOrder.RGB: # already in RGB order
+    pass
   elif preprocessing.channel_order == ChannelOrder.BGR:
-    image_data = image_data[:, :, ::-1]         # RGB -> BGR
+    image_data = image_data[:, :, ::-1] # RGB -> BGR
   else:
     raise ValueError("Invalid ChannelOrder value: %s" % str(preprocessing.channel_order))
+  
+  # Apply scaling factor
   image_data[:, :, 0] *= preprocessing.scaling
   image_data[:, :, 1] *= preprocessing.scaling
   image_data[:, :, 2] *= preprocessing.scaling
+  
+  # Apply per-channel normalization: (pixel - mean) / std
   image_data[:, :, 0] = (image_data[:, :, 0] - preprocessing.means[0]) / preprocessing.stds[0]
   image_data[:, :, 1] = (image_data[:, :, 1] - preprocessing.means[1]) / preprocessing.stds[1]
   image_data[:, :, 2] = (image_data[:, :, 2] - preprocessing.means[2]) / preprocessing.stds[2]
-  image_data = image_data.transpose([2, 0, 1])  # (height,width,3) -> (3,height,width)
-  return image_data.copy()                      # copy required to eliminate negative stride (which Torch doesn't like)
+  
+  image_data = image_data.transpose([2, 0, 1]) # (height,width,3) -> (3,height,width)
+  
+  return image_data.copy() # copy required to eliminate negative stride (which Torch doesn't like)
 
-def load_image(url, preprocessing, min_dimension_pixels = None, horizontal_flip = False):
+def load_image(url, preprocessing: PreprocessingParams, min_dimension_pixels = None, horizontal_flip = False):
   """
   Loads and preprocesses an image for use with the Faster R-CNN model.
   This involves standardizing image pixels to ImageNet dataset-level
@@ -97,5 +122,5 @@ def load_image(url, preprocessing, min_dimension_pixels = None, horizontal_flip 
   else:
     scale_factor = 1.0
   image_data = np.array(image).astype(np.float32)
-  image_data = _preprocess_vgg16(image_data = image_data, preprocessing = preprocessing)
+  image_data = _apply_preprocessing(image_data = image_data, preprocessing = preprocessing)
   return image_data, image, scale_factor, (image_data.shape[0], original_height, original_width)

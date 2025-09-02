@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    participant Main as __main__.py
+    participant Dataset as Dataset
+
+    Main->>Dataset: Instantiate Dataset with params
+    alt data dir does not exist
+        Dataset-->>Dataset: Data dir does not exists
+        Dataset-->>Main: Raise FileNotFoundError
+    else data directory exists
+        Dataset->>Dataset: Get classes and prepare mappings
+        Dataset->>Dataset: Get filepaths based on split (train/val/test)
+        
+        Dataset->>Dataset: Get ground truth boxes from annotation files (XML/JSON) 
+
+        loop for each filepath
+            Dataset->>Dataset: Parse and validate annotation file
+            loop for each object in a file
+                Dataset->>Dataset: Read/Parse object's properties (difficult, class, box,...)
+            end
+            Dataset-->>Dataset: Append objects with filepath mapping 
+        end
+        
+        Dataset-->>Main: Return Dataset instance (ready to iterate)
+    end

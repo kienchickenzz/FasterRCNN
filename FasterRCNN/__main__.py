@@ -6,7 +6,7 @@
 # Main module for the PyTorch implementation of Faster R-CNN. Run this from the
 # root directory, e.g.:
 #
-# python -m pytorch.FasterRCNN --help
+# python -m FasterRCNN --help
 #
 
 #
@@ -62,7 +62,7 @@ def render_anchors(backbone):
 
 def evaluate( 
     model, 
-    eval_data = None, 
+    eval_data: Optional[ dogcat.Dataset ] = None, 
     num_samples: Optional[ int ] = None, 
     plot: bool = False, 
     print_average_precisions: bool = False 
@@ -114,7 +114,7 @@ def create_optimizer(model):
   return t.optim.SGD(params, lr = options.learning_rate, momentum = options.momentum)
 
 def enable_cuda_memory_profiler(model):
-  from pytorch.FasterRCNN import profile
+  from FasterRCNN import profile
   import sys
   import threading
   memory_profiler = profile.CUDAMemoryProfiler([ model ], filename = "cuda_memory.txt")

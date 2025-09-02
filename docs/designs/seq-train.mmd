@@ -1,14 +1,15 @@
 sequenceDiagram
     autonumber
+    
     participant User as User
     participant Main as __main__
-    participant Model as FasterRCNNModel
     participant State as state
     participant Trainer as train()
     participant Dataset as Dataset (VOC, COCO,...)
     participant Optimizer as Optimizer
     participant TrainStep as model.train_step()
     participant Stats as TrainingStatistics
+    participant Model as FasterRCNNModel
     participant Eval as evaluate()
     participant PR as PrecisionRecallCurveCalculator
 
@@ -19,6 +20,7 @@ sequenceDiagram
     Main->>Main: create FasterRCNN with options
 
     Main->>Trainer: func call
+    activate Trainer 
 
     Trainer->>Trainer: create train Dataset
     Trainer->>Trainer: create eval Dataset
@@ -28,7 +30,9 @@ sequenceDiagram
 
     Note over Trainer, Stats: Repeat by configured epoch number
     loop epochs (1 .. options.epochs)
-        Trainer->>Trainer: create TrainingStatistics
+        Trainer->>Stats: create
+        activate Stats
+        Stats->>Trainer: return instance
         
         Note over Trainer,Stats: iterate over train data samples
         loop for each train sample
@@ -42,6 +46,7 @@ sequenceDiagram
             Trainer->>Stats: pass loss
             Stats->>Stats: accumulate loss accross steps within epoch
             Stats-->>Trainer: return stats dict
+            deactivate Stats
             Trainer->>Trainer: update progbar
         end
 
@@ -54,17 +59,29 @@ sequenceDiagram
     Trainer->>Trainer: save best weights (if required)
     
     Trainer->>Eval: func call
+    deactivate Trainer
+    activate Eval 
+
+    Eval->>PR: Create 
+    activate PR
+    PR->>Eval: Return instance 
+
     Note over Model,PR: iterate over eval data samples
     loop for each eval sample
         Eval->>Dataset: request sample
         Dataset-->>Eval: yield sample
 
         Eval->>Model: pass image data
+        activate Model
         Model-->>PR: return prediction
+        deactivate Model
+
         PR->>PR: compute correctness of predictions and accumulate results 
     end
     PR->>Eval: return results
+    deactivate PR
     Eval-->>Eval: print results
+    deactivate Eval 
 
     Main-->>User: exit (training completed)
 

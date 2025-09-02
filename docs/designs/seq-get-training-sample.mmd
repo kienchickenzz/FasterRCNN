@@ -1,0 +1,64 @@
+sequenceDiagram
+    autonumber
+
+    participant Main as MainLoop
+    participant Dataset as Dataset
+    participant CacheManagement
+    participant SelectedCache
+    participant ImageMod as ImageModule
+    participant Anchors as AnchorsModule
+
+    Main->>Dataset: Request next sample
+
+    alt reach the end 
+        Dataset-->>Main: Raise StopIteration
+    else not reach the end yet 
+        Dataset->>Dataset: Increment iteration index i by 1
+        Dataset->>Dataset: Get filepath for current iteration
+
+        Dataset->>Dataset: Determine caching strategy (based on augment flag)
+        
+        Dataset->>CacheManagement: Lookup cache
+        activate CacheManagement
+        CacheManagement-->>Dataset: Return cache
+        deactivate CacheManagement
+
+        activate SelectedCache
+
+        alt sample already in cache (already used in previous epoch)
+            Dataset->>SelectedCache: Lookup filepath
+            SelectedCache-->>Dataset: Return sample
+        else not cached
+            Dataset->>ImageMod: Pass params (image path, flip, ...)
+
+            activate ImageMod
+
+            ImageMod->>ImageMod: Load image
+            ImageMod->>ImageMod: Resize, flip image (if required)
+            ImageMod->>ImageMod: Apply preprocessing
+
+            ImageMod-->>Dataset: Return data (image_data, scale_factor,...)
+            
+            deactivate ImageMod
+
+            Dataset->>Dataset: Adjust ground truth boxes according to augmented image
+
+            Dataset->>Anchors: Generate anchor maps
+            activate Anchors
+            Anchors-->>Dataset: Return anchor maps
+            deactivate Anchors
+
+            Dataset->>Anchors: Generate RPN maps from anchors and ground truth boxes
+            activate Anchors
+            Anchors-->>Dataset: Return RPN ground truth maps
+            deactivate Anchors
+
+            alt caching enabled
+                Dataset->>SelectedCache: Write sample
+                deactivate SelectedCache
+            end
+        end
+
+        Dataset-->>Main: Return TrainingSample
+
+    end
