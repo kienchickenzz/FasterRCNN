@@ -39,27 +39,12 @@ classDiagram
         +int feature_map_channels
         +int feature_pixels
         +int feature_vector_size
-        +PreprocessingParams image_preprocessing_params
         
         %% Required members
         +nn.Module feature_extractor
         +nn.Module pool_to_feature_vector
 
         +compute_feature_map_shape(image_shape) (c, h, w)
-    }
-
-    class ChannelOrder {
-        <<enumeration>>
-        +RGB
-        +BGR
-    }
-
-    class PreprocessingParams {
-        <<dataclass>>
-        +ChannelOrder channel_order
-        +float scaling
-        +List<float> means
-        +List<float> stds
     }
     
     class FeatureExtractor {
@@ -72,7 +57,6 @@ classDiagram
         +int feature_pixels = 16
         +int feature_vector_size = 4096
         +FeatureExtractor feature_extractor
-        +PreprocessingParams image_preprocessing_params
 
         +PoolToFeatureVector pool_to_feature_vector
     }
@@ -121,6 +105,3 @@ classDiagram
 
     %% Dependency
     DetectorNetwork ..> PoolToFeatureVector : uses
-    
-    Backbone *-- PreprocessingParams : image_preprocessing_params
-    PreprocessingParams --> ChannelOrder : channel_order

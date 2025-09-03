@@ -24,7 +24,7 @@ import torch as t
 from tqdm import tqdm
 from typing import Optional
 
-from .datasets import voc, dogcat, fruits
+from .datasets import voc, dogcat, fruits, fire
 from .models.faster_rcnn import FasterRCNNModel
 from .models import vgg16
 from .models import vgg16_torch
@@ -37,7 +37,7 @@ from . import visualize
 
 
 def render_anchors(backbone):
-  training_data = fruits.Dataset(
+  training_data = fire.Dataset(
     image_preprocessing_params = backbone.image_preprocessing_params,
     compute_feature_map_shape_fn = backbone.compute_feature_map_shape,
     feature_pixels = backbone.feature_pixels,
@@ -62,13 +62,13 @@ def render_anchors(backbone):
 
 def evaluate( 
     model, 
-    eval_data: Optional[ fruits.Dataset ] = None, 
+    eval_data: Optional[ fire.Dataset ] = None, 
     num_samples: Optional[ int ] = None, 
     plot: bool = False, 
     print_average_precisions: bool = False 
 ):
   if eval_data is None:
-    eval_data = fruits.Dataset(
+    eval_data = fire.Dataset(
       image_preprocessing_params = model.backbone.image_preprocessing_params,
       compute_feature_map_shape_fn = model.backbone.compute_feature_map_shape,
       feature_pixels = model.backbone.feature_pixels,
@@ -95,11 +95,11 @@ def evaluate(
     if i >= num_samples:
       break
   if print_average_precisions:
-    precision_recall_curve.print_average_precisions(class_index_to_name = fruits.Dataset.class_index_to_name)
+    precision_recall_curve.print_average_precisions(class_index_to_name = fire.Dataset.class_index_to_name)
   mean_average_precision = 100.0 * precision_recall_curve.compute_mean_average_precision()
   print("Mean Average Precision = %1.2f%%" % mean_average_precision)
   if plot:
-    precision_recall_curve.plot_average_precisions(class_index_to_name = fruits.Dataset.class_index_to_name)
+    precision_recall_curve.plot_average_precisions(class_index_to_name = fire.Dataset.class_index_to_name)
   return mean_average_precision
 
 def create_optimizer(model):
@@ -149,7 +149,7 @@ def train(model):
   print("Checkpoints       : %s" % ("disabled" if not options.checkpoint_dir else options.checkpoint_dir))
   print("Final weights file: %s" % ("none" if not options.save_to else options.save_to))
   print("Best weights file : %s" % ("none" if not options.save_best_to else options.save_best_to))
-  training_data = fruits.Dataset(
+  training_data = fire.Dataset(
     dir = options.dataset_dir,
     split = options.train_split,
     image_preprocessing_params = model.backbone.image_preprocessing_params,
@@ -159,7 +159,7 @@ def train(model):
     shuffle = True,
     cache = options.cache_images
   )
-  eval_data = fruits.Dataset(
+  eval_data = fire.Dataset(
     dir = options.dataset_dir,
     split = options.eval_split,
     image_preprocessing_params = model.backbone.image_preprocessing_params,
@@ -251,7 +251,7 @@ def predict(model, image_data, image, show_image, output_path):
     show_image = show_image,
     image = image,
     scored_boxes_by_class_index = scored_boxes_by_class_index,
-    class_index_to_name = fruits.Dataset.class_index_to_name
+    class_index_to_name = fire.Dataset.class_index_to_name
   )
 
 def predict_one(model, url, show_image, output_path):
@@ -264,7 +264,7 @@ def predict_all(model, split):
   if not os.path.exists(dirname):
     os.makedirs(dirname)
   print("Rendering predictions from '%s' set to '%s'..." % (split, dirname))
-  dataset = fruits.Dataset(
+  dataset = fire.Dataset(
     dir = options.dataset_dir,
     split = split,
     image_preprocessing_params = model.backbone.image_preprocessing_params,
@@ -367,7 +367,7 @@ if __name__ == "__main__":
 
   # Construct model and load initial weights
   model = FasterRCNNModel(
-    num_classes = fruits.Dataset.num_classes,
+    num_classes = fire.Dataset.num_classes,
     backbone = backbone,
     allow_edge_proposals = not options.exclude_edge_proposals
   ).cuda()
