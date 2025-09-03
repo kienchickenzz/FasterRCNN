@@ -20,8 +20,7 @@ uv.lock
 *.swp
 
 VOCdevkit/
-asirra_cat_vs_dogs/
+dataset/
 
 note.txt
 cmd.txt
-experiments/
